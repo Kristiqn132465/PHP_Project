@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Reservation;
 use Carbon\Carbon;
 use Illuminate\Http\Request;
 
@@ -13,61 +14,51 @@ class ReservationController extends Controller
     }
 
     public function store(Request $request)
-{
-    $validated = $request->validate([
-        'name' => ['required', 'string', 'min:2', 'max:80'],
-        'gmail' => ['required', 'email', 'max:255'],
-        'phone' => ['required', 'string', 'min:6', 'max:25'],
+    {
+        $validated = $request->validate([
+            'name' => ['required', 'string', 'min:2', 'max:80'],
+            'gmail' => ['required', 'email', 'max:255'],
+            'phone' => ['required', 'string', 'min:6', 'max:25'],
+            'picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
+            'people' => ['required', 'integer', 'min:1', 'max:50'],
+            'day'  => ['required', 'date'],
+            'hour' => ['required', 'date_format:H:i'],
+        ]);
 
-        'picture' => ['nullable', 'image', 'mimes:jpg,jpeg,png,webp', 'max:4096'],
-
-        'people' => ['required', 'integer', 'min:1', 'max:50'],
-
-        // date + time
-        'day'  => ['required', 'date'],
-        'hour' => ['required', 'date_format:H:i'],
-    ]);
-
-    // --- Custom restrictions ---
-    // 1) No past dates
-    $day = Carbon::parse($validated['day'])->startOfDay();
-    $today = Carbon::today();
-
-    if ($day->lt($today)) {
-        return back()
-            ->withErrors(['day' => 'You cannot select a past date.'])
-            ->withInput();
-    }
-
-    // 2) Only between 10:00 and 22:00 (inclusive)
-    $time = Carbon::createFromFormat('H:i', $validated['hour']);
-    $minutes = $time->hour * 60 + $time->minute;
-
-    $min = 10 * 60; // 10:00
-    $max = 22 * 60; // 22:00
-
-    if ($minutes < $min || $minutes > $max) {
-        return back()
-            ->withErrors(['hour' => 'Time must be between 10:00 and 22:00.'])
-            ->withInput();
-    }
-
-    // 3) If the day is today, the time must not be in the past
-    if ($day->isSameDay($today)) {
-        $selected = Carbon::createFromFormat('Y-m-d H:i', $validated['day'].' '.$validated['hour']);
-        if ($selected->lt(Carbon::now())) {
-            return back()
-                ->withErrors(['hour' => 'You cannot select a time in the past (for today).'])
-                ->withInput();
+        $day = Carbon::parse($validated['day'])->startOfDay();
+        if ($day->lt(Carbon::today())) {
+            return back()->withErrors(['day' => 'You cannot select a past date.'])->withInput();
         }
-    }
 
-    // Store picture if provided
-    if ($request->hasFile('picture')) {
-        $validated['picture'] = $request->file('picture')->store('reservations', 'public');
-    }
+        $time = Carbon::createFromFormat('H:i', $validated['hour']);
+        $minutes = $time->hour * 60 + $time->minute;
+        if ($minutes < 10 * 60 || $minutes > 22 * 60) {
+            return back()->withErrors(['hour' => 'Time must be between 10:00 and 22:00.'])->withInput();
+        }
 
-    return back()->with('success', 'Reservation submitted!');
+        if ($day->isSameDay(Carbon::today())) {
+            $selected = Carbon::createFromFormat('Y-m-d H:i', $validated['day'].' '.$validated['hour']);
+            if ($selected->lt(Carbon::now())) {
+                return back()->withErrors(['hour' => 'You cannot select a time in the past (for today).'])->withInput();
+            }
+        }
+
+        $picturePath = null;
+        if ($request->hasFile('picture')) {
+            $picturePath = $request->file('picture')->store('reservations', 'public');
+        }
+
+        Reservation::create([
+            'name' => $validated['name'],
+            'gmail' => $validated['gmail'],
+            'phone' => $validated['phone'],
+            'picture_path' => $picturePath,
+            'people' => $validated['people'],
+            'day' => $validated['day'],
+            'hour' => $validated['hour'],
+        ]);
+
+        return redirect()->route('reservation.create')->with('success', 'Reservation submitted!');
+    }
 }
 
-}
