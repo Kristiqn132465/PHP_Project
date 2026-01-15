@@ -6,12 +6,37 @@ use App\Http\Controllers\ReservedController;
 use App\Models\User;
 use Illuminate\Support\Facades\Hash;
 
+Route::view('/', 'welcome');
+
+Route::view('dashboard', 'dashboard')
+    ->middleware(['auth', 'verified'])
+    ->name('dashboard');
+
+Route::view('profile', 'profile')
+    ->middleware(['auth'])
+    ->name('profile');
+
+Route::get('/reservation', [ReservationController::class, 'create'])
+    ->name('reservation.create');
+
+Route::post('/reservation', [ReservationController::class, 'store'])
+    ->name('reservation.store');
+
+Route::get('/reserved', [ReservedController::class, 'index'])
+    ->name('reserved.index');
+
 Route::middleware(['auth', 'admin'])->group(function () {
-    Route::get('/reserved/{reservation}/edit', [ReservedController::class, 'edit'])->name('reserved.edit');
-    Route::put('/reserved/{reservation}', [ReservedController::class, 'update'])->name('reserved.update');
-    Route::delete('/reserved/{reservation}', [ReservedController::class, 'destroy'])->name('reserved.destroy');
+    Route::get('/reserved/{reservation}/edit', [ReservedController::class, 'edit'])
+        ->name('reserved.edit');
+
+    Route::put('/reserved/{reservation}', [ReservedController::class, 'update'])
+        ->name('reserved.update');
+
+    Route::delete('/reserved/{reservation}', [ReservedController::class, 'destroy'])
+        ->name('reserved.destroy');
 });
 
+require __DIR__.'/auth.php';
 
 //Route::get('/setup-admin', function () {
 //    if (User::where('role', 'admin')->exists()) {
@@ -27,22 +52,3 @@ Route::middleware(['auth', 'admin'])->group(function () {
 //
 //    return 'Admin created: admin@example.com / password';
 //});
-
-
-Route::get('/reserved', [ReservedController::class, 'index'])->name('reserved.index');
-Route::get('/reservation', [ReservationController::class, 'create'])->name('reservation.create');
-Route::post('/reservation', [ReservationController::class, 'store'])->name('reservation.store');
-
-
-
-Route::view('/', 'welcome');
-
-Route::view('dashboard', 'dashboard')
-    ->middleware(['auth', 'verified'])
-    ->name('dashboard');
-
-Route::view('profile', 'profile')
-    ->middleware(['auth'])
-    ->name('profile');
-
-require __DIR__.'/auth.php';
