@@ -39,6 +39,12 @@
                     @endif
                 </div>
 
+                @if (session('success'))
+                    <div class="mb-4 rounded-lg bg-green-50 text-green-700 px-4 py-3">
+                        {{ session('success') }}
+                    </div>
+                @endif
+
                 @if($reservations->isEmpty())
                     <div class="text-gray-600">No reservations found.</div>
                 @else
@@ -52,8 +58,13 @@
                                     <th class="py-2 pr-4">People</th>
                                     <th class="py-2 pr-4">Phone</th>
                                     <th class="py-2 pr-4">Gmail</th>
+
+                                    @if(auth()->check() && auth()->user()->role === 'admin')
+                                        <th class="py-2 pr-4">Actions</th>
+                                    @endif
                                 </tr>
                             </thead>
+
                             <tbody class="divide-y">
                                 @foreach($reservations as $r)
                                     <tr>
@@ -63,6 +74,27 @@
                                         <td class="py-2 pr-4">{{ $r->people }}</td>
                                         <td class="py-2 pr-4">{{ $r->phone }}</td>
                                         <td class="py-2 pr-4">{{ $r->gmail }}</td>
+
+                                        @if(auth()->check() && auth()->user()->role === 'admin')
+                                            <td class="py-2 pr-4">
+                                                <div class="flex items-center gap-2">
+                                                    <a href="{{ route('reserved.edit', $r) }}"
+                                                       class="px-3 py-1 rounded bg-gray-200 hover:bg-gray-300 text-gray-800 text-sm">
+                                                        Edit
+                                                    </a>
+
+                                                    <form method="POST" action="{{ route('reserved.destroy', $r) }}"
+                                                          onsubmit="return confirm('Delete this reservation?')">
+                                                        @csrf
+                                                        @method('DELETE')
+                                                        <button type="submit"
+                                                                class="px-3 py-1 rounded bg-red-600 hover:bg-red-700 text-white text-sm">
+                                                            Delete
+                                                        </button>
+                                                    </form>
+                                                </div>
+                                            </td>
+                                        @endif
                                     </tr>
                                 @endforeach
                             </tbody>
